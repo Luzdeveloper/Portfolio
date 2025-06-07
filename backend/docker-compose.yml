@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  backend:
+    build: .
+    container_name: backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/portfolio
+      - JWT_SECRET=adminsecret123
+
+volumes:
+  mongo-data:
