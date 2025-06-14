@@ -7,9 +7,9 @@ export default function Admin() {
     github: "",
     website: "",
   });
-
   const [projects, setProjects] = useState([]);
   const [message, setMessage] = useState("");
+  const [editId, setEditId] = useState(null);
 
   const token = localStorage.getItem("token");
 
@@ -37,9 +37,14 @@ export default function Admin() {
       return;
     }
 
+    const method = editId ? "PUT" : "POST";
+    const url = editId
+      ? `http://localhost:5000/api/projects/${editId}`
+      : "http://localhost:5000/api/projects";
+
     try {
-      const res = await fetch("http://localhost:5000/api/projects", {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -50,9 +55,10 @@ export default function Admin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur");
 
-      setMessage("✅ Projet ajouté !");
+      setMessage(editId ? "✅ Projet mis à jour" : "✅ Projet ajouté");
       setFormData({ title: "", description: "", github: "", website: "" });
-      fetchProjects(); // recharge la liste
+      setEditId(null);
+      fetchProjects();
     } catch (err) {
       setMessage(`❌ ${err.message}`);
     }
@@ -74,15 +80,32 @@ export default function Admin() {
       if (!res.ok) throw new Error(data.error || "Erreur");
 
       setMessage("🗑️ Projet supprimé");
-      fetchProjects(); // recharge
+      fetchProjects();
     } catch (err) {
       setMessage(`❌ ${err.message}`);
     }
   };
 
+  const handleEdit = (project) => {
+    setFormData({
+      title: project.title,
+      description: project.description,
+      github: project.github,
+      website: project.website,
+    });
+    setEditId(project._id);
+    setMessage("✏️ Modification du projet");
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setFormData({ title: "", description: "", github: "", website: "" });
+    setMessage("Modification annulée");
+  };
+
   return (
     <div style={{ maxWidth: 800, margin: "auto", padding: "1rem" }}>
-      <h1>Admin – Gestion des projets</h1>
+      <h1>Admin – {editId ? "Modifier un projet" : "Ajouter un projet"}</h1>
 
       <form onSubmit={handleSubmit}>
         <input
@@ -111,24 +134,53 @@ export default function Admin() {
           value={formData.website}
           onChange={handleChange}
         />
-        <button type="submit">Ajouter</button>
+        <button type="submit">{editId ? "Mettre à jour" : "Ajouter"}</button>
+        {editId && <button onClick={cancelEdit}>Annuler</button>}
       </form>
 
       {message && <p>{message}</p>}
 
       <hr />
 
-      <h2>Projets existants</h2>
+      <h2>Projets</h2>
       <ul>
         {projects.map((p) => (
-          <li key={p._id}>
+          <li key={p._id} style={{ marginBottom: "2rem" }}>
             <strong>{p.title}</strong> – {p.description}
-            <button
-              onClick={() => handleDelete(p._id)}
-              style={{ marginLeft: "1rem" }}
-            >
-              Supprimer
-            </button>
+            {p.website && (
+              <>
+                <div style={{ marginTop: "0.5rem" }}>
+                  <iframe
+                    src={p.website}
+                    title={p.title}
+                    width="100%"
+                    height="200"
+                    style={{ border: "1px solid #ccc" }}
+                  />
+                </div>
+                <a
+                  href={p.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-block",
+                    marginTop: "0.5rem",
+                    color: "#007acc",
+                  }}
+                >
+                  🌐 Ouvrir dans un nouvel onglet
+                </a>
+              </>
+            )}
+            <div style={{ marginTop: "0.5rem" }}>
+              <button
+                onClick={() => handleEdit(p)}
+                style={{ marginRight: "0.5rem" }}
+              >
+                Modifier
+              </button>
+              <button onClick={() => handleDelete(p._id)}>Supprimer</button>
+            </div>
           </li>
         ))}
       </ul>
